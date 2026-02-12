@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 56" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield icon (filled) -->
+  <path d="M28 6L8 16v10c0 11.5 8.2 22.3 20 25 11.8-2.7 20-13.5 20-25V16L28 6z"
+        stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#g)"/>
+
+  <!-- Check mark -->
+  <path d="M20 28l5 5 10-10"
+        stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Text: Arch Vision -->
+  <text x="58" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="700" font-size="26" fill="#6366f1" letter-spacing="-0.5">
+    Arch Vision
+  </text>
+</svg>
