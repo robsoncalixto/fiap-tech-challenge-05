@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Shield, Mail, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +11,14 @@ import { Card } from '@/components/ui/card'
 type LoginStep = 'form' | 'magic-link-sent'
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
