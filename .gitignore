@@ -34,6 +34,12 @@ build/
 # testing
 /coverage
 
+# playwright
+e2e/.auth/
+e2e/screenshots/
+e2e/test-results/
+playwright-report/
+
 # next.js
 /.next/
 /out/

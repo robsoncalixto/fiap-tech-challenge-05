@@ -50,7 +50,7 @@ export function ReportContent({ markdown, severitySummary }: ReportContentProps)
           )}
         </div>
       )}
-      <div className="prose prose-sm max-w-none">
+      <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
             p: ({ children }) => {

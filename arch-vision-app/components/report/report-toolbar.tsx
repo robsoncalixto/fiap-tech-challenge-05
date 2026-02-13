@@ -49,20 +49,44 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
         return
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (html2pdf() as any)
-        .set({
-          margin: [15, 10, 15, 10],
-          filename: `arch-vision-report-${reportId}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-        })
-        .from(element)
-        .save()
+      // Force light mode for PDF so text is readable on white background
+      const root = document.documentElement
+      const wasDark = root.classList.contains('dark')
+      if (wasDark) {
+        root.classList.remove('dark')
+        root.style.colorScheme = 'light'
+      }
 
-      toast('success', 'PDF exportado com sucesso')
+      // Brief delay for styles to repaint
+      await new Promise(r => setTimeout(r, 100))
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (html2pdf() as any)
+          .set({
+            margin: [15, 10, 15, 10],
+            filename: `arch-vision-report-${reportId}.pdf`,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: '#ffffff',
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] },
+          })
+          .from(element)
+          .save()
+
+        toast('success', 'PDF exportado com sucesso')
+      } finally {
+        // Restore dark mode if it was active
+        if (wasDark) {
+          root.classList.add('dark')
+          root.style.colorScheme = 'dark'
+        }
+      }
     } catch {
       toast('error', 'Erro ao gerar PDF')
     } finally {
