@@ -236,7 +236,7 @@ test.describe('Arch Vision — Full QA Validation', () => {
     // Toolbar buttons
     await expect(page.getByLabel(/compartilh/i).or(page.getByText('Compartilhar'))).toBeVisible()
     await expect(page.getByText(/PDF/)).toBeVisible()
-    await expect(page.getByText('Excluir')).toBeVisible()
+    await expect(page.getByRole('button', { name: /excluir/i })).toBeVisible()
 
     // Verify it's actually in light mode (background should be light)
     const bgColor = await page.evaluate(() => {
@@ -369,8 +369,138 @@ test.describe('Arch Vision — Full QA Validation', () => {
     console.log('[QA] Theme toggled back to light mode successfully')
   })
 
-  // ── STEP 9: Dashboard shows the new report ────────────────────
-  test('09 — Dashboard lists the newly created report', async ({ page }) => {
+  // ── STEP 9: Share Link & Shared Report Page ──────────────────
+  test('09 — Share link generates and shared page renders report', async ({ page }) => {
+    test.skip(!reportUrl, 'No report URL from previous step')
+    await page.goto(reportUrl)
+    await waitForIdle(page)
+
+    // Skip if report failed
+    const failed = await page.locator('text=Análise falhou').isVisible().catch(() => false)
+    if (failed) {
+      console.log('[QA] Report failed — skipping share test')
+      return
+    }
+
+    // Intercept clipboard.writeText to capture the share URL
+    await page.evaluate(() => {
+      (window as unknown as Record<string, string>).__capturedClipboard = ''
+      const original = navigator.clipboard.writeText.bind(navigator.clipboard)
+      navigator.clipboard.writeText = async (text: string) => {
+        (window as unknown as Record<string, string>).__capturedClipboard = text
+        return original(text).catch(() => {})
+      }
+    })
+
+    // Click the share button
+    const shareButton = page.getByLabel('Copiar link de compartilhamento')
+    await expect(shareButton).toBeVisible()
+    await shareButton.click()
+
+    // Wait for the success toast
+    await expect(
+      page.getByText('Link copiado para a área de transferência')
+    ).toBeVisible({ timeout: 10_000 })
+
+    console.log('[QA] Share link generated successfully')
+    await snap(page, '09-share-link-copied')
+
+    // Read the captured share URL
+    const shareUrl = await page.evaluate(
+      () => (window as unknown as Record<string, string>).__capturedClipboard
+    )
+    console.log(`[QA] Share URL: ${shareUrl}`)
+
+    if (shareUrl && shareUrl.includes('/shared/')) {
+      // Navigate to the shared page
+      await page.goto(shareUrl)
+      await waitForIdle(page)
+
+      // Verify shared page renders the report
+      await expect(page.locator('h1:has-text("Relatório STRIDE")')).toBeVisible({ timeout: 10_000 })
+      await expect(page.locator('text=Compartilhado via')).toBeVisible()
+      await expect(page.locator('#report-content')).toBeVisible({ timeout: 10_000 })
+
+      await snap(page, '09-shared-report-page')
+
+      // Scroll to bottom to verify full content
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await page.waitForTimeout(500)
+      await snap(page, '09-shared-report-bottom')
+
+      console.log('[QA] Shared page rendered correctly')
+    } else {
+      console.log('[QA] Could not capture share URL — share generation validated via toast only')
+    }
+
+    console.log('[QA] Share link test completed')
+  })
+
+  // ── STEP 10: PDF Download ───────────────────────────────────
+  test('10 — PDF export downloads file and preserves scroll', async ({ page }) => {
+    test.skip(!reportUrl, 'No report URL from previous step')
+    await page.goto(reportUrl)
+    await waitForIdle(page)
+
+    // Skip if report failed
+    const failed = await page.locator('text=Análise falhou').isVisible().catch(() => false)
+    if (failed) {
+      console.log('[QA] Report failed — skipping PDF test')
+      return
+    }
+
+    // Check if user is pro (PDF requires pro tier)
+    const pdfButton = page.getByText('PDF').first()
+    await expect(pdfButton).toBeVisible()
+
+    const buttonText = await pdfButton.textContent()
+    if (buttonText?.includes('Pro')) {
+      console.log('[QA] User is not pro — PDF button redirects to upgrade. Skipping download test.')
+      await snap(page, '10-pdf-pro-required')
+      return
+    }
+
+    // Scroll down before clicking PDF to test scroll preservation
+    await page.evaluate(() => window.scrollTo(0, 300))
+    await page.waitForTimeout(300)
+    const scrollBefore = await page.evaluate(() => window.scrollY)
+    console.log(`[QA] Scroll position before PDF: ${scrollBefore}`)
+
+    // Listen for download event
+    const downloadPromise = page.waitForEvent('download', { timeout: 60_000 })
+    await pdfButton.click()
+
+    // Wait for the download
+    const download = await downloadPromise
+    const filename = download.suggestedFilename()
+    console.log(`[QA] PDF downloaded: ${filename}`)
+    expect(filename).toMatch(/^arch-vision-report-.*\.pdf$/)
+
+    // Save the file to verify it exists
+    const downloadPath = path.join(SCREENSHOT_DIR, filename)
+    await download.saveAs(downloadPath)
+
+    // Verify file has content (more than 0 bytes)
+    const fs = await import('node:fs')
+    const stat = fs.statSync(downloadPath)
+    console.log(`[QA] PDF file size: ${stat.size} bytes`)
+    expect(stat.size).toBeGreaterThan(0)
+
+    // Check scroll position was preserved
+    const scrollAfter = await page.evaluate(() => window.scrollY)
+    console.log(`[QA] Scroll position after PDF: ${scrollAfter}`)
+    expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThan(50)
+
+    await snap(page, '10-pdf-downloaded-scroll-preserved')
+
+    // Success toast should appear
+    await expect(page.getByText('PDF exportado com sucesso')).toBeVisible({ timeout: 10_000 })
+
+    console.log('[QA] PDF download and scroll preservation validated')
+  })
+
+  // ── STEP 11: Dashboard shows the new report ────────────────────
+  test('11 — Dashboard lists the newly created report', async ({ page }) => {
     await page.goto('/dashboard')
     await waitForIdle(page)
 
@@ -389,8 +519,8 @@ test.describe('Arch Vision — Full QA Validation', () => {
     console.log('[QA] Dashboard validation complete')
   })
 
-  // ── STEP 10: Dark Mode on Dashboard ────────────────────────────
-  test('10 — Dashboard renders correctly in DARK mode', async ({ page }) => {
+  // ── STEP 12: Dark Mode on Dashboard ────────────────────────────
+  test('12 — Dashboard renders correctly in DARK mode', async ({ page }) => {
     await page.goto('/dashboard')
     await page.evaluate(() => {
       localStorage.setItem('theme', 'dark')
@@ -407,12 +537,12 @@ test.describe('Arch Vision — Full QA Validation', () => {
 
     await expect(page.locator('h1:has-text("Dashboard")')).toBeVisible()
 
-    await snap(page, '10-dashboard-dark-mode')
+    await snap(page, '12-dashboard-dark-mode')
     console.log('[QA] Dashboard dark mode validated')
   })
 
-  // ── STEP 11: Analyze Page in Dark Mode ─────────────────────────
-  test('11 — Analyze page renders correctly in DARK mode', async ({ page }) => {
+  // ── STEP 13: Analyze Page in Dark Mode ─────────────────────────
+  test('13 — Analyze page renders correctly in DARK mode', async ({ page }) => {
     await page.goto('/analyze')
     await page.evaluate(() => {
       localStorage.setItem('theme', 'dark')
@@ -430,7 +560,7 @@ test.describe('Arch Vision — Full QA Validation', () => {
     await fileInput.setInputFiles(DIAGRAM_PATH)
     await expect(page.locator('text=test-architecture-diagram.jpeg')).toBeVisible({ timeout: 5_000 })
 
-    await snap(page, '11-analyze-dark-mode-with-upload')
+    await snap(page, '13-analyze-dark-mode-with-upload')
     console.log('[QA] Analyze page dark mode with upload validated')
   })
 })

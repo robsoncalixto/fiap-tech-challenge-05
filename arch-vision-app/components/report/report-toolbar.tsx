@@ -57,6 +57,10 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
         root.style.colorScheme = 'light'
       }
 
+      // Save scroll position before capture
+      const scrollX = window.scrollX
+      const scrollY = window.scrollY
+
       // Brief delay for styles to repaint
       await new Promise(r => setTimeout(r, 100))
 
@@ -72,6 +76,9 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
               useCORS: true,
               allowTaint: true,
               backgroundColor: '#ffffff',
+              scrollX: 0,
+              scrollY: -scrollY,
+              windowWidth: element.scrollWidth,
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] },
@@ -81,6 +88,8 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
 
         toast('success', 'PDF exportado com sucesso')
       } finally {
+        // Restore scroll position after capture
+        window.scrollTo(scrollX, scrollY)
         // Restore dark mode if it was active
         if (wasDark) {
           root.classList.add('dark')
