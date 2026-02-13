@@ -31,27 +31,39 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const loadedRef = useRef(false)
 
   const loadReport = useCallback(async () => {
+    console.log('[ReportPage] Loading report:', id)
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error: reportError } = await supabase
       .from('reports')
       .select('*')
       .eq('id', id)
       .single()
 
+    console.log('[ReportPage] Report data:', data ? { status: data.status, hasMarkdown: !!data.result_markdown, markdownLength: data.result_markdown?.length, hasSeverity: !!data.severity_summary } : 'null')
+    if (reportError) {
+      console.error('[ReportPage] Report fetch error:', reportError)
+    }
+
     if (data) {
       setReport(data as Report)
 
-      const { data: signedData } = await supabase.storage
+      console.log('[ReportPage] Fetching signed URL for image:', data.image_url)
+      const { data: signedData, error: storageError } = await supabase.storage
         .from('diagrams')
         .createSignedUrl(data.image_url, 3600)
 
+      if (storageError) {
+        console.error('[ReportPage] Storage signed URL error:', storageError)
+      }
       if (signedData) {
+        console.log('[ReportPage] Signed URL obtained:', signedData.signedUrl?.substring(0, 80) + '...')
         setImageUrl(signedData.signedUrl)
       }
 
       // Trigger analysis for pending reports
       if (data.status === 'pending' && !triggeredRef.current) {
         triggeredRef.current = true
+        console.log('[ReportPage] Triggering analysis for pending report')
         fetch('/api/ai/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -67,6 +79,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         .select('tier')
         .eq('id', user.id)
         .single()
+      console.log('[ReportPage] User tier:', profile?.tier)
       if (profile) setTier(profile.tier)
     }
   }, [id])

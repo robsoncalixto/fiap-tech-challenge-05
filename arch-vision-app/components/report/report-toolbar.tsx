@@ -35,15 +35,23 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
   }
 
   async function handleExportPdf() {
+    console.log('[PDF Export] Starting export. Tier:', tier, 'ReportId:', reportId)
+
     if (tier !== 'pro') {
+      console.log('[PDF Export] User not pro tier, redirecting to /upgrade')
       router.push('/upgrade')
       return
     }
 
     setExporting(true)
     try {
-      const html2pdf = (await import('html2pdf.js')).default
+      console.log('[PDF Export] Dynamically importing html2pdf.js...')
+      const html2pdfModule = await import('html2pdf.js')
+      const html2pdf = html2pdfModule.default
+      console.log('[PDF Export] html2pdf.js loaded:', typeof html2pdf, html2pdfModule)
+
       const element = document.getElementById('report-content')
+      console.log('[PDF Export] Target element #report-content:', element ? `found (${element.scrollWidth}x${element.scrollHeight})` : 'NOT FOUND')
       if (!element) {
         toast('error', 'Conteúdo do relatório não encontrado')
         return
@@ -52,6 +60,7 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
       // Force light mode for PDF so text is readable on white background
       const root = document.documentElement
       const wasDark = root.classList.contains('dark')
+      console.log('[PDF Export] Dark mode active:', wasDark)
       if (wasDark) {
         root.classList.remove('dark')
         root.style.colorScheme = 'light'
@@ -60,31 +69,37 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
       // Save scroll position before capture
       const scrollX = window.scrollX
       const scrollY = window.scrollY
+      console.log('[PDF Export] Scroll position saved:', { scrollX, scrollY })
 
       // Brief delay for styles to repaint
       await new Promise(r => setTimeout(r, 100))
 
       try {
+        console.log('[PDF Export] Creating html2pdf instance and configuring...')
+        const worker = html2pdf()
+        console.log('[PDF Export] html2pdf worker created:', typeof worker)
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (html2pdf() as any)
-          .set({
-            margin: [15, 10, 15, 10],
-            filename: `arch-vision-report-${reportId}.pdf`,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: {
-              scale: 2,
-              useCORS: true,
-              allowTaint: true,
-              backgroundColor: '#ffffff',
-              scrollX: 0,
-              scrollY: -scrollY,
-              windowWidth: element.scrollWidth,
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] },
-          })
-          .from(element)
-          .save()
+        const configured = (worker as any).set({
+          margin: [15, 10, 15, 10],
+          filename: `arch-vision-report-${reportId}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            scrollX: 0,
+            scrollY: -scrollY,
+            windowWidth: element.scrollWidth,
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] },
+        })
+        console.log('[PDF Export] Configuration set, calling .from(element).save()...')
+
+        await configured.from(element).save()
+        console.log('[PDF Export] PDF save completed successfully')
 
         toast('success', 'PDF exportado com sucesso')
       } finally {
@@ -95,8 +110,13 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
           root.classList.add('dark')
           root.style.colorScheme = 'dark'
         }
+        console.log('[PDF Export] Restored scroll and dark mode state')
       }
-    } catch {
+    } catch (err) {
+      console.error('[PDF Export] FAILED with error:', err)
+      console.error('[PDF Export] Error name:', (err as Error)?.name)
+      console.error('[PDF Export] Error message:', (err as Error)?.message)
+      console.error('[PDF Export] Error stack:', (err as Error)?.stack)
       toast('error', 'Erro ao gerar PDF')
     } finally {
       setExporting(false)

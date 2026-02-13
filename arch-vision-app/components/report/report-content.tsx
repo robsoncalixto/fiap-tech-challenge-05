@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { SeverityBadge } from './severity-badge'
 import type { SeveritySummary } from '@/lib/utils/severity-parser'
@@ -20,6 +23,13 @@ function replaceSeverityTags(text: string): React.ReactNode[] {
 }
 
 export function ReportContent({ markdown, severitySummary }: ReportContentProps) {
+  useEffect(() => {
+    console.log('[ReportContent] Mounted with markdown length:', markdown?.length ?? 0)
+    console.log('[ReportContent] Markdown first 200 chars:', markdown?.substring(0, 200))
+    console.log('[ReportContent] Severity summary:', severitySummary)
+    console.log('[ReportContent] ReactMarkdown type:', typeof ReactMarkdown)
+  }, [markdown, severitySummary])
+
   return (
     <div>
       {severitySummary && (

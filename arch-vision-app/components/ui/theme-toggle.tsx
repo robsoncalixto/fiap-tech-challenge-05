@@ -13,20 +13,31 @@ const options = [
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    console.log('[ThemeToggle] State:', { theme, resolvedTheme, open, mounted })
+  }, [theme, resolvedTheme, open, mounted])
 
   useEffect(() => {
     if (!open) return
 
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        console.log('[ThemeToggle] Click outside detected, closing dropdown')
         setOpen(false)
       }
     }
 
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        console.log('[ThemeToggle] Escape pressed, closing dropdown')
         setOpen(false)
         buttonRef.current?.focus()
       }
@@ -40,19 +51,34 @@ export function ThemeToggle() {
     }
   }, [open])
 
-  // resolvedTheme is undefined during SSR; show Monitor as fallback
+  // Avoid hydration mismatch: render placeholder until mounted
+  if (!mounted) {
+    return (
+      <div className="relative">
+        <button
+          className="rounded-lg p-2 text-text-secondary hover:bg-surface-secondary hover:text-text transition-colors"
+          aria-label="Alternar tema"
+        >
+          <Monitor className="h-5 w-5" />
+        </button>
+      </div>
+    )
+  }
+
+  // Show icon matching the actual resolved appearance
   const ButtonIcon =
-    !resolvedTheme || theme === 'system'
-      ? Monitor
-      : resolvedTheme === 'dark'
-        ? Moon
-        : Sun
+    resolvedTheme === 'dark'
+      ? Moon
+      : Sun
 
   return (
     <div ref={containerRef} className="relative">
       <button
         ref={buttonRef}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          console.log('[ThemeToggle] Button clicked, toggling dropdown:', !open)
+          setOpen(!open)
+        }}
         className="rounded-lg p-2 text-text-secondary hover:bg-surface-secondary hover:text-text transition-colors"
         aria-label="Alternar tema"
         aria-expanded={open}
@@ -74,6 +100,7 @@ export function ThemeToggle() {
                 role="menuitemradio"
                 aria-checked={isActive}
                 onClick={() => {
+                  console.log('[ThemeToggle] Theme selected:', option.value)
                   setTheme(option.value)
                   setOpen(false)
                   buttonRef.current?.focus()
