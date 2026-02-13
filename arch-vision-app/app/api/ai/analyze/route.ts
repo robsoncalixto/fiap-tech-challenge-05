@@ -1,4 +1,4 @@
-import { NextResponse, after } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenRouter } from '@/lib/openrouter'
@@ -37,73 +37,82 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Report not found or not in pending state' }, { status: 400 })
   }
 
-  await supabase
+  const admin = createAdminClient()
+
+  console.log(`[analyze] Report ${reportId} — setting status to processing`)
+  await admin
     .from('reports')
     .update({ status: 'processing' })
     .eq('id', reportId)
 
-  after(async () => {
-    const admin = createAdminClient()
-    try {
-      const { data: signedData } = await admin.storage
-        .from('diagrams')
-        .createSignedUrl(report.image_url, 3600)
+  try {
+    console.log(`[analyze] Report ${reportId} — creating signed URL for ${report.image_url}`)
+    const { data: signedData, error: signedError } = await admin.storage
+      .from('diagrams')
+      .createSignedUrl(report.image_url, 3600)
 
-      if (!signedData) {
-        throw new Error('Failed to create signed URL for diagram')
-      }
+    if (signedError || !signedData) {
+      console.error(`[analyze] Report ${reportId} — signed URL error:`, signedError?.message)
+      throw new Error('Failed to create signed URL for diagram')
+    }
+    console.log(`[analyze] Report ${reportId} — signed URL created`)
 
-      const userMessage = buildUserMessage({
-        imageUrl: signedData.signedUrl,
-        contextText: report.context_text,
+    const userMessage = buildUserMessage({
+      imageUrl: signedData.signedUrl,
+      contextText: report.context_text,
+    })
+
+    console.log(`[analyze] Report ${reportId} — calling OpenRouter model=${report.ai_model}`)
+    const result = await callOpenRouter(report.ai_model, [
+      { role: 'system', content: STRIDE_SYSTEM_PROMPT },
+      userMessage,
+    ])
+
+    const severitySummary = parseSeverity(result)
+    console.log(`[analyze] Report ${reportId} — severity parsed:`, JSON.stringify(severitySummary))
+
+    const { error: updateError } = await admin
+      .from('reports')
+      .update({
+        result_markdown: result,
+        severity_summary: severitySummary,
+        completed_at: new Date().toISOString(),
+        status: 'completed',
       })
+      .eq('id', reportId)
 
-      const result = await callOpenRouter(report.ai_model, [
-        { role: 'system', content: STRIDE_SYSTEM_PROMPT },
-        userMessage,
-      ])
+    if (updateError) {
+      console.error(`[analyze] Report ${reportId} — failed to save result:`, updateError.message)
+      throw new Error(`Failed to save report: ${updateError.message}`)
+    }
 
-      const severitySummary = parseSeverity(result)
+    console.log(`[analyze] Report ${reportId} — completed successfully`)
+    return NextResponse.json({ status: 'completed' })
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    console.error(`[analyze] Report ${reportId} failed:`, errorMessage)
 
-      await admin
-        .from('reports')
-        .update({
-          result_markdown: result,
-          severity_summary: severitySummary,
-          completed_at: new Date().toISOString(),
-          status: 'completed',
-        })
-        .eq('id', reportId)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    await admin
+      .from('reports')
+      .update({
+        status: 'failed',
+        error_message: errorMessage,
+      })
+      .eq('id', reportId)
 
-      await admin
-        .from('reports')
-        .update({
-          status: 'failed',
-          error_message: errorMessage,
-        })
-        .eq('id', reportId)
-
+    const { data: currentUser } = await admin
+      .from('users')
+      .select('credits')
+      .eq('id', report.user_id)
+      .single()
+    if (currentUser) {
       await admin
         .from('users')
-        .update({ credits: report.user_id })
+        .update({ credits: currentUser.credits + 1 })
         .eq('id', report.user_id)
-        .then(async () => {
-          const { data: currentUser } = await admin
-            .from('users')
-            .select('credits')
-            .eq('id', report.user_id)
-            .single()
-          if (currentUser) {
-            await admin
-              .from('users')
-              .update({ credits: currentUser.credits + 1 })
-              .eq('id', report.user_id)
-          }
-        })
+      console.log(`[analyze] Report ${reportId} — credit refunded to user ${report.user_id}`)
     }
-  })
 
-  return NextResponse.json({ status: 'processing' })
+    return NextResponse.json({ status: 'failed', error: errorMessage }, { status: 500 })
+  }
 }
