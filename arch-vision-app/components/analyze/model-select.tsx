@@ -7,10 +7,12 @@ interface ModelSelectProps {
 }
 
 const models = [
-  { id: 'google/gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', pro: false },
+  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', pro: false },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o', pro: false },
+  { id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', pro: false },
   { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', pro: true },
-  { id: 'openai/gpt-4o', name: 'GPT-4o', pro: true },
-  { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', pro: true },
+  { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', pro: true }, 
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', pro: true },
 ]
 
 export function ModelSelect({ value, onChange, tier }: ModelSelectProps) {

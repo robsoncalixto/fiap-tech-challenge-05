@@ -16,7 +16,7 @@ export default function AnalyzePage() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [context, setContext] = useState('')
-  const [model, setModel] = useState('google/gemini-2.0-flash-lite')
+  const [model, setModel] = useState('google/gemini-2.5-flash-lite')
   const [loading, setLoading] = useState(false)
   const [credits, setCredits] = useState<number | null>(null)
   const [tier, setTier] = useState('starter')

@@ -8,8 +8,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 const PRO_ONLY_MODELS = [
   'anthropic/claude-sonnet-4',
-  'openai/gpt-4o',
-  'google/gemini-2.0-flash',
+  'anthropic/claude-sonnet-4.5',
+  'google/gemini-2.5-pro',
 ]
 
 export async function uploadAndCreateReport(formData: FormData) {

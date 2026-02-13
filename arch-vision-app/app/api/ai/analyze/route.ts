@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     console.log(`[analyze] Report ${reportId} — creating signed URL for ${report.image_url}`)
-    const { data: signedData, error: signedError } = await admin.storage
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('diagrams')
       .createSignedUrl(report.image_url, 3600)
 
