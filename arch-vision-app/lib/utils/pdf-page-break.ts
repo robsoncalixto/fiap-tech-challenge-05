@@ -1,3 +1,72 @@
+import type { jsPDF } from 'jspdf'
+
+const HEADER_HEIGHT_MM = 12
+const HEADER_SEPARATOR_GAP = 2
+
+export interface PdfHeaderOptions {
+  logoDataUrl: string
+  generatedAt: string
+  totalPages: number
+}
+
+export function drawPageHeader(
+  pdf: jsPDF,
+  pageIndex: number,
+  margin: number,
+  pageWidth: number,
+  opts: PdfHeaderOptions,
+) {
+  const logoHeight = 6
+  const logoWidth = logoHeight * 5 // logo aspect ratio ~5:1
+  const headerY = margin
+
+  pdf.addImage(opts.logoDataUrl, 'PNG', margin, headerY, logoWidth, logoHeight)
+
+  pdf.setFontSize(8)
+  pdf.setTextColor(120, 120, 120)
+
+  const dateText = opts.generatedAt
+  const pageText = `${pageIndex + 1} / ${opts.totalPages}`
+
+  const dateWidth = pdf.getTextWidth(dateText)
+  const pageWidth_ = pdf.getTextWidth(pageText)
+
+  const textY = headerY + logoHeight - 0.5
+  pdf.text(dateText, pageWidth - margin - dateWidth - pageWidth_ - 8, textY)
+  pdf.text(pageText, pageWidth - margin - pageWidth_, textY)
+
+  const lineY = headerY + logoHeight + HEADER_SEPARATOR_GAP
+  pdf.setDrawColor(210, 210, 210)
+  pdf.setLineWidth(0.3)
+  pdf.line(margin, lineY, pageWidth - margin, lineY)
+}
+
+export function getContentStartY(margin: number): number {
+  return margin + HEADER_HEIGHT_MM
+}
+
+export function getContentHeightMm(pageHeight: number, margin: number): number {
+  return pageHeight - margin - getContentStartY(margin)
+}
+
+export function loadLogoAsDataUrl(logoUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || 280
+      canvas.height = img.naturalHeight || 56
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Canvas context unavailable')); return }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => reject(new Error('Failed to load logo'))
+    img.src = logoUrl
+  })
+}
+
 export interface BlockPosition {
   tag: string
   offsetTop: number

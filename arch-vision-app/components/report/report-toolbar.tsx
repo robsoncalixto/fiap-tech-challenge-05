@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button'
 import { deleteReport, generateShareToken } from '@/app/actions/reports'
 import { toast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
-import { collectBlockPositions, calculatePageSlices, sliceCanvasToPages } from '@/lib/utils/pdf-page-break'
+import {
+  collectBlockPositions,
+  calculatePageSlices,
+  sliceCanvasToPages,
+  drawPageHeader,
+  getContentStartY,
+  getContentHeightMm,
+  loadLogoAsDataUrl,
+} from '@/lib/utils/pdf-page-break'
 
 interface ReportToolbarProps {
   reportId: string
@@ -68,6 +76,7 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
       try {
         const scale = 2
         const blocks = collectBlockPositions(element)
+        const logoDataUrl = await loadLogoAsDataUrl('/logo.svg')
 
         const canvas = await html2canvas(element, {
           scale,
@@ -85,15 +94,25 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
         const contentWidthMm = pageWidth - 2 * margin
-        const contentHeightMm = pageHeight - 2 * margin
+        const contentHeightMm = getContentHeightMm(pageHeight, margin)
         const pageHeightPx = (contentHeightMm / contentWidthMm) * canvas.width
 
         const slices = calculatePageSlices(blocks, canvas.height, pageHeightPx, scale)
         const pages = sliceCanvasToPages(canvas, slices, contentWidthMm)
 
+        const now = new Date()
+        const generatedAt = now.toLocaleString('pt-BR', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        })
+
+        const headerOpts = { logoDataUrl, generatedAt, totalPages: pages.length }
+        const contentY = getContentStartY(margin)
+
         pages.forEach((page, i) => {
           if (i > 0) pdf.addPage()
-          pdf.addImage(page.imgData, 'JPEG', margin, margin, contentWidthMm, page.heightMm)
+          drawPageHeader(pdf, i, margin, pageWidth, headerOpts)
+          pdf.addImage(page.imgData, 'JPEG', margin, contentY, contentWidthMm, page.heightMm)
         })
 
         pdf.save(`arch-vision-report-${reportId}.pdf`)
