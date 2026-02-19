@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { deleteReport, generateShareToken } from '@/app/actions/reports'
 import { toast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
+import { collectBlockPositions, calculatePageSlices, sliceCanvasToPages } from '@/lib/utils/pdf-page-break'
 
 interface ReportToolbarProps {
   reportId: string
@@ -65,8 +66,11 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
       await new Promise(r => setTimeout(r, 100))
 
       try {
+        const scale = 2
+        const blocks = collectBlockPositions(element)
+
         const canvas = await html2canvas(element, {
-          scale: 2,
+          scale,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
@@ -75,28 +79,22 @@ export function ReportToolbar({ reportId, tier }: ReportToolbarProps) {
           windowWidth: element.scrollWidth,
         })
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.95)
         const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
 
         const margin = 10
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
-        const contentWidth = pageWidth - 2 * margin
-        const contentHeight = pageHeight - 2 * margin
-        const imgHeight = (canvas.height * contentWidth) / canvas.width
+        const contentWidthMm = pageWidth - 2 * margin
+        const contentHeightMm = pageHeight - 2 * margin
+        const pageHeightPx = (contentHeightMm / contentWidthMm) * canvas.width
 
-        let heightLeft = imgHeight
-        let position = margin
+        const slices = calculatePageSlices(blocks, canvas.height, pageHeightPx, scale)
+        const pages = sliceCanvasToPages(canvas, slices, contentWidthMm)
 
-        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight)
-        heightLeft -= contentHeight
-
-        while (heightLeft > 0) {
-          pdf.addPage()
-          position = margin - (imgHeight - heightLeft)
-          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeight)
-          heightLeft -= contentHeight
-        }
+        pages.forEach((page, i) => {
+          if (i > 0) pdf.addPage()
+          pdf.addImage(page.imgData, 'JPEG', margin, margin, contentWidthMm, page.heightMm)
+        })
 
         pdf.save(`arch-vision-report-${reportId}.pdf`)
         toast('success', 'PDF exportado com sucesso')
