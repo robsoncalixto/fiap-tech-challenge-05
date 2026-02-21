@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Monitor, Check } from 'lucide-react'
 
+const DROPDOWN_WIDTH = 160
+
 const options = [
   { value: 'light', label: 'Claro', icon: Sun },
   { value: 'dark', label: 'Escuro', icon: Moon },
@@ -16,28 +18,23 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const posRef = useRef({ top: 0, left: 0 })
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    console.log('[ThemeToggle] State:', { theme, resolvedTheme, open, mounted })
-  }, [theme, resolvedTheme, open, mounted])
-
-  useEffect(() => {
     if (!open) return
 
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        console.log('[ThemeToggle] Click outside detected, closing dropdown')
         setOpen(false)
       }
     }
 
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        console.log('[ThemeToggle] Escape pressed, closing dropdown')
         setOpen(false)
         buttonRef.current?.focus()
       }
@@ -51,10 +48,19 @@ export function ThemeToggle() {
     }
   }, [open])
 
-  // Avoid hydration mismatch: render placeholder until mounted
+  function handleToggle() {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      let left = rect.right - DROPDOWN_WIDTH
+      if (left < 8) left = 8
+      posRef.current = { top: rect.bottom + 8, left }
+    }
+    setOpen(!open)
+  }
+
   if (!mounted) {
     return (
-      <div className="relative">
+      <div>
         <button
           className="rounded-lg p-2 text-text-secondary hover:bg-surface-secondary hover:text-text transition-colors"
           aria-label="Alternar tema"
@@ -65,20 +71,13 @@ export function ThemeToggle() {
     )
   }
 
-  // Show icon matching the actual resolved appearance
-  const ButtonIcon =
-    resolvedTheme === 'dark'
-      ? Moon
-      : Sun
+  const ButtonIcon = resolvedTheme === 'dark' ? Moon : Sun
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef}>
       <button
         ref={buttonRef}
-        onClick={() => {
-          console.log('[ThemeToggle] Button clicked, toggling dropdown:', !open)
-          setOpen(!open)
-        }}
+        onClick={handleToggle}
         className="rounded-lg p-2 text-text-secondary hover:bg-surface-secondary hover:text-text transition-colors"
         aria-label="Alternar tema"
         aria-expanded={open}
@@ -90,7 +89,13 @@ export function ThemeToggle() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-40 rounded-lg border border-border bg-surface py-1 shadow-lg z-50"
+          style={{
+            position: 'fixed',
+            top: posRef.current.top,
+            left: posRef.current.left,
+            width: DROPDOWN_WIDTH,
+          }}
+          className="rounded-lg border border-border bg-surface py-1 shadow-lg z-50"
         >
           {options.map((option) => {
             const isActive = theme === option.value
@@ -100,7 +105,6 @@ export function ThemeToggle() {
                 role="menuitemradio"
                 aria-checked={isActive}
                 onClick={() => {
-                  console.log('[ThemeToggle] Theme selected:', option.value)
                   setTheme(option.value)
                   setOpen(false)
                   buttonRef.current?.focus()

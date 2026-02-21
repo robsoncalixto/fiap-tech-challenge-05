@@ -17,7 +17,7 @@ const AUTH_FILE = 'e2e/.auth/user.json'
 
 setup('authenticate via E2E session API', async ({ page }) => {
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000'
-  const secret = process.env.E2E_TEST_SECRET
+  const secret = process.env.E2E_TEST_SECRET || 'e2e-local-secret-change-me'
 
   if (!secret) {
     throw new Error(

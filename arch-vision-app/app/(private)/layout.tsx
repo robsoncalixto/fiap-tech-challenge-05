@@ -70,14 +70,14 @@ export default async function PrivateLayout({
     <div className="flex h-screen">
       <Sidebar credits={credits} userName={userName} avatarUrl={avatarUrl} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
+      <div className="flex flex-1 flex-col min-h-0 min-w-0">
+        <header className="relative z-10 flex h-16 items-center justify-between border-b border-border px-4 lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
             <Shield className="h-6 w-6 text-primary" />
             <span className="font-heading text-lg font-bold">Arch Vision</span>
           </div>
           <MobileMenu credits={credits} userName={userName} />
-          <div className="flex items-center">
+          <div className="ml-auto flex items-center">
             <ThemeToggle />
           </div>
         </header>
