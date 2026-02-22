@@ -1,4 +1,4 @@
-import { Shield, Cpu, FileDown, Link2, Zap, Lock } from 'lucide-react'
+import { Shield, Cpu, FileDown, Link2, Zap, Lock, MessageSquare } from 'lucide-react'
 
 const features = [
   {
@@ -20,6 +20,11 @@ const features = [
     icon: Link2,
     title: 'Links Compartilháveis',
     description: 'Gere links únicos para compartilhar relatórios com sua equipe sem necessidade de login.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Consultor de Segurança via Chat',
+    description: 'Discuta os pontos fracos da sua arquitetura com um consultor sênior de segurança. Tire dúvidas e aprofunde a análise em tempo real.',
   },
   {
     icon: Zap,

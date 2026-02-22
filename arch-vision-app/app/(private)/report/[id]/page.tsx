@@ -8,6 +8,8 @@ import { ReportToolbar } from '@/components/report/report-toolbar'
 import { DiagramPreview } from '@/components/report/diagram-preview'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ChatPanel } from '@/components/chat/chat-panel'
+import { ChatUpgradePrompt } from '@/components/chat/chat-upgrade-prompt'
 
 interface Report {
   id: string
@@ -127,24 +129,48 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     )
   }
 
+  const isCompleted = report.status === 'completed'
+  const isPro = tier === 'pro'
+  const showChatPanel = isCompleted && isPro
+  const showUpgradePrompt = isCompleted && !isPro
+  const showSidePanel = showChatPanel || showUpgradePrompt
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold">Relatório STRIDE</h1>
-          <p className="text-sm text-text-secondary">Modelo: {report.ai_model}</p>
+    <div className={`flex flex-col ${showSidePanel ? 'lg:flex-row lg:gap-6' : ''}`}>
+      <div className={`${showSidePanel ? 'flex-1 min-w-0' : 'max-w-5xl mx-auto w-full'} space-y-6`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="font-heading text-2xl font-bold">Relatório STRIDE</h1>
+            <p className="text-sm text-text-secondary">Modelo: {report.ai_model}</p>
+          </div>
+          <ReportToolbar reportId={id} tier={tier} />
         </div>
-        <ReportToolbar reportId={id} tier={tier} />
+
+        {imageUrl && <DiagramPreview imageUrl={imageUrl} />}
+
+        {report.result_markdown && (
+          <div id="report-content">
+            <ReportContent
+              markdown={report.result_markdown}
+              severitySummary={report.severity_summary}
+            />
+          </div>
+        )}
       </div>
 
-      {imageUrl && <DiagramPreview imageUrl={imageUrl} />}
-
-      {report.result_markdown && (
-        <div id="report-content">
-          <ReportContent
-            markdown={report.result_markdown}
+      {showChatPanel && report.result_markdown && (
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-4 lg:self-start">
+          <ChatPanel
+            reportId={id}
+            reportMarkdown={report.result_markdown}
             severitySummary={report.severity_summary}
           />
+        </div>
+      )}
+
+      {showUpgradePrompt && (
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-4 lg:self-start">
+          <ChatUpgradePrompt />
         </div>
       )}
     </div>
