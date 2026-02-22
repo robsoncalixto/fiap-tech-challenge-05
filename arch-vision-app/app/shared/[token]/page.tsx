@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ReportContent } from '@/components/report/report-content'
 import { DiagramPreview } from '@/components/report/diagram-preview'
 import { parseSeverity } from '@/lib/utils/severity-parser'
+import { getSharedConversation } from '@/app/actions/chat'
+import { SharedChatSection } from './shared-chat-section'
 
 interface Report {
   id: string
@@ -71,6 +73,8 @@ export default async function SharedReportPage({
 
   const severitySummary = reportData.severity_summary || parseSeverity(reportData.result_markdown)
 
+  const { messages: chatMessages } = await getSharedConversation(reportData.id)
+
   return (
     <div className="min-h-screen bg-surface">
       <div className="border-b border-border bg-surface">
@@ -98,6 +102,10 @@ export default async function SharedReportPage({
               severitySummary={severitySummary}
             />
           </div>
+        )}
+
+        {chatMessages.length > 0 && (
+          <SharedChatSection messages={chatMessages} />
         )}
       </div>
 

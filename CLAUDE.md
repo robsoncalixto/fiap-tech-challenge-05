@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-12
 - Supabase Auth (managed) + existing `public.users` table (no changes) (003-email-magic-login)
 - TypeScript 5.x, React 19, Next.js 16.1.6 + html2canvas-pro 1.6.6, jspdf 4.1.0 (both already installed, dynamically imported) (005-pdf-a4-formatting)
 - N/A (client-side PDF generation only) (005-pdf-a4-formatting)
+- TypeScript 5.x, Next.js 16.1.6, React 19.2.3 + `@supabase/ssr` 0.8.x, `@supabase/supabase-js` 2.95.x, `react-markdown` 10.x, `lucide-react` 0.563.x, `next-themes` 0.4.x (006-report-chat-consultant)
+- Supabase PostgreSQL (new tables: `chat_conversations`, `chat_messages`) (006-report-chat-consultant)
 
 - TypeScript 5.x, Next.js 16.1.6, React 19.2.3 + `@supabase/ssr`, `@supabase/supabase-js`, `stripe`, `lucide-react`, `@react-pdf/renderer` (or `html2pdf.js`), `react-markdown`, `@tailwindcss/typography` (001-arch-vision-mvp)
 
@@ -28,9 +30,9 @@ npm test && npm run lint
 TypeScript 5.x, Next.js 16.1.6, React 19.2.3: Follow standard conventions
 
 ## Recent Changes
+- 006-report-chat-consultant: Added TypeScript 5.x, Next.js 16.1.6, React 19.2.3 + `@supabase/ssr` 0.8.x, `@supabase/supabase-js` 2.95.x, `react-markdown` 10.x, `lucide-react` 0.563.x, `next-themes` 0.4.x
 - 005-pdf-a4-formatting: Added TypeScript 5.x, React 19, Next.js 16.1.6 + html2canvas-pro 1.6.6, jspdf 4.1.0 (both already installed, dynamically imported)
 - 003-email-magic-login: Added TypeScript 5.x, Next.js 16.1.6, React 19.2.3 + `@supabase/ssr` 0.8.x, `@supabase/supabase-js` 2.95.x, `lucide-react` 0.563.x, `next-themes` 0.4.x
-- 002-dark-mode: Added TypeScript 5.x, Next.js 16.1.6, React 19.2.3 + `next-themes` (new), `lucide-react` (existing — Sun, Moon, Monitor icons)
 
 
 <!-- MANUAL ADDITIONS START -->
